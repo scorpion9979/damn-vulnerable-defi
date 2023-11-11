@@ -37,7 +37,10 @@ describe('[Challenge] Naive receiver', function () {
     });
 
     it('Execution', async function () {
-        /** CODE YOUR SOLUTION HERE */
+        const ETH = await pool.ETH();
+        const ExploitFactory = await ethers.getContractFactory('Exploit', deployer);
+        const exploit = await ExploitFactory.deploy(pool.address, receiver.address, ETH);
+        await exploit.exploit();
     });
 
     after(async function () {
