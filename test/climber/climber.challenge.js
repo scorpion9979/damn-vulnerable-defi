@@ -16,12 +16,12 @@ describe('[Challenge] Climber', function () {
 
         await setBalance(player.address, PLAYER_INITIAL_ETH_BALANCE);
         expect(await ethers.provider.getBalance(player.address)).to.equal(PLAYER_INITIAL_ETH_BALANCE);
-        
+
         // Deploy the vault behind a proxy using the UUPS pattern,
         // passing the necessary addresses for the `ClimberVault::initialize(address,address,address)` function
         vault = await upgrades.deployProxy(
             await ethers.getContractFactory('ClimberVault', deployer),
-            [ deployer.address, proposer.address, sweeper.address ],
+            [deployer.address, proposer.address, sweeper.address],
             { kind: 'uups' }
         );
 
@@ -29,17 +29,17 @@ describe('[Challenge] Climber', function () {
         expect(await vault.getLastWithdrawalTimestamp()).to.be.gt(0);
         expect(await vault.owner()).to.not.eq(ethers.constants.AddressZero);
         expect(await vault.owner()).to.not.eq(deployer.address);
-        
+
         // Instantiate timelock
         let timelockAddress = await vault.owner();
         timelock = await (
             await ethers.getContractFactory('ClimberTimelock', deployer)
         ).attach(timelockAddress);
-        
+
         // Ensure timelock delay is correct and cannot be changed
         expect(await timelock.delay()).to.eq(TIMELOCK_DELAY);
         await expect(timelock.updateDelay(TIMELOCK_DELAY + 1)).to.be.revertedWithCustomError(timelock, 'CallerNotTimelock');
-        
+
         // Ensure timelock roles are correctly initialized
         expect(
             await timelock.hasRole(ethers.utils.id("PROPOSER_ROLE"), proposer.address)
@@ -58,6 +58,13 @@ describe('[Challenge] Climber', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+
+        // deploy and run the exploit
+        const exploit = await (await ethers.getContractFactory('ClimberExploit', player)).deploy(timelock.address, vault.address);
+        await exploit.exploit();
+
+        // player can now sweep the vault
+        await vault.connect(player).sweepFunds(token.address);
     });
 
     after(async function () {
