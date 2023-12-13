@@ -68,7 +68,7 @@ describe('[Challenge] Wallet mining', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
-        const provider = new ethers.providers.InfuraProvider("mainnet", "8d7e1ccb994f44b2ac14432b6a308f9c"); // TODO: use env for infura key
+        const provider = new ethers.providers.InfuraProvider("mainnet", process.env.INFURA_PROJECT_ID);
         // the address that deployed the fact contract
         const factDeployer = "0x1aa7451DD11b8cb16AC089ED7fE05eFa00100A6A";
         // the tx hashes of the fact contract deployments
